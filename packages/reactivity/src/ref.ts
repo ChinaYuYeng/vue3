@@ -22,6 +22,7 @@ export interface Ref<T = any> {
 
 export type ToRefs<T = any> = { [K in keyof T]: Ref<T[K]> }
 
+// 把普通对象转换换成响应式对象
 const convert = <T extends unknown>(val: T): T =>
   isObject(val) ? reactive(val) : val
 
@@ -48,29 +49,33 @@ export function shallowRef(value?: unknown) {
   return createRef(value, true)
 }
 
+// ref的内部实现，其实就是reactive对象的一个访问引用
+// toref/torefs也是reactive对象的一个访问引用，ref和toref本质是一样的
 class RefImpl<T> {
   private _value: T
 
-  public readonly __v_isRef = true
+  public readonly __v_isRef = true //ref的标识
 
   constructor(private _rawValue: T, public readonly _shallow = false) {
     this._value = _shallow ? _rawValue : convert(_rawValue)
   }
 
   get value() {
-    track(toRaw(this), TrackOpTypes.GET, 'value')
+    track(toRaw(this), TrackOpTypes.GET, 'value') //跟踪依赖
     return this._value
   }
 
   set value(newVal) {
     if (hasChanged(toRaw(newVal), this._rawValue)) {
       this._rawValue = newVal
+      //_shallow为true为什么返回的是普通对象，因为_shallow为true的意思是只监听对象的第一层，而这里的第一层是{value：{}}
       this._value = this._shallow ? newVal : convert(newVal)
       trigger(toRaw(this), TriggerOpTypes.SET, 'value', newVal)
     }
   }
 }
 
+// 创建ref
 function createRef(rawValue: unknown, shallow = false) {
   if (isRef(rawValue)) {
     return rawValue
@@ -82,10 +87,12 @@ export function triggerRef(ref: Ref) {
   trigger(toRaw(ref), TriggerOpTypes.SET, 'value', __DEV__ ? ref.value : void 0)
 }
 
+// 解包
 export function unref<T>(ref: T): T extends Ref<infer V> ? V : T {
   return isRef(ref) ? (ref.value as any) : ref
 }
 
+// 代理访问逻辑
 const shallowUnwrapHandlers: ProxyHandler<any> = {
   get: (target, key, receiver) => unref(Reflect.get(target, key, receiver)),
   set: (target, key, value, receiver) => {
@@ -143,22 +150,26 @@ export function customRef<T>(factory: CustomRefFactory<T>): Ref<T> {
   return new CustomRefImpl(factory) as any
 }
 
+// 拆分reactive的对象使得单个属性依然有响应式的能力
 export function toRefs<T extends object>(object: T): ToRefs<T> {
   if (__DEV__ && !isProxy(object)) {
     console.warn(`toRefs() expects a reactive object but received a plain one.`)
   }
   const ret: any = isArray(object) ? new Array(object.length) : {}
   for (const key in object) {
+    // 单独处理每个属性
     ret[key] = toRef(object, key)
   }
   return ret
 }
 
+// 给予对象的属性get，set的访问控制，这里是针对torefs方法对每个属性的值访问重定向到原来的reactive对象复用reactive的响应式能力
 class ObjectRefImpl<T extends object, K extends keyof T> {
   public readonly __v_isRef = true
 
   constructor(private readonly _object: T, private readonly _key: K) {}
 
+  // 这里可以看到如果_object本身不是代理，那么只是进行了普通对象的get，set
   get value() {
     return this._object[this._key]
   }
@@ -172,6 +183,7 @@ export function toRef<T extends object, K extends keyof T>(
   object: T,
   key: K
 ): Ref<T[K]> {
+  // 如果属性是ref那么torefs在处理的时候会保持原来的ref
   return isRef(object[key])
     ? object[key]
     : (new ObjectRefImpl(object, key) as any)

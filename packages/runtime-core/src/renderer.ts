@@ -286,6 +286,7 @@ export const queuePostRenderEffect = __FEATURE_SUSPENSE__
   ? queueEffectWithSuspense
   : queuePostFlushCb
 
+  // 给instance添加ref
 export const setRef = (
   rawRef: VNodeNormalizedRef,
   oldRawRef: VNodeNormalizedRef | null,
@@ -341,6 +342,7 @@ export const setRef = (
     }
   }
 
+  // 模板上设置的ref会注入到setup返回的相同命名的变量里
   if (isString(ref)) {
     const doSet = () => {
       refs[ref] = value
@@ -392,6 +394,9 @@ export const setRef = (
  * })
  * ```
  */
+/**
+ * 平台相关的渲染方法的工厂函数
+ */
 export function createRenderer<
   HostNode = RendererNode,
   HostElement = RendererElement
@@ -430,6 +435,7 @@ function baseCreateRenderer(
     initFeatureFlags()
   }
 
+  // dom操作方法
   const {
     insert: hostInsert,
     remove: hostRemove,
@@ -449,6 +455,7 @@ function baseCreateRenderer(
 
   // Note: functions inside this closure should use `const xxx = () => {}`
   // style in order to prevent being inlined by minifiers.
+  // 对比更新dom
   const patch: PatchFn = (
     n1,
     n2,
@@ -721,6 +728,7 @@ function baseCreateRenderer(
       // only do this in production since cloned trees cannot be HMR updated.
       el = vnode.el = hostCloneNode(vnode.el)
     } else {
+      // 创建dom
       el = vnode.el = hostCreateElement(
         vnode.type as string,
         isSVG,
@@ -732,6 +740,7 @@ function baseCreateRenderer(
       if (shapeFlag & ShapeFlags.TEXT_CHILDREN) {
         hostSetElementText(el, vnode.children as string)
       } else if (shapeFlag & ShapeFlags.ARRAY_CHILDREN) {
+        // 递归mountchildren
         mountChildren(
           vnode.children as VNodeArrayChildren,
           el,
@@ -771,6 +780,7 @@ function baseCreateRenderer(
       setScopeId(el, scopeId, vnode, parentComponent)
     }
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
+      // 开发环境下el会绑定vnode形成双向绑定，一般是vnode绑定el
       Object.defineProperty(el, '__vnode', {
         value: vnode,
         enumerable: false
@@ -1228,10 +1238,12 @@ function baseCreateRenderer(
         )
       }
     } else {
+      // 更新组件vnode
       updateComponent(n1, n2, optimized)
     }
   }
 
+  // 挂载组件
   const mountComponent: MountComponentFn = (
     initialVNode,
     container,
@@ -1265,6 +1277,7 @@ function baseCreateRenderer(
     if (__DEV__) {
       startMeasure(instance, `init`)
     }
+    // 初始化 props、slots、调用 setup()、验证组件和指令的合理性
     setupComponent(instance)
     if (__DEV__) {
       endMeasure(instance, `init`)
@@ -1284,6 +1297,7 @@ function baseCreateRenderer(
       return
     }
 
+    // 设置渲染effect
     setupRenderEffect(
       instance,
       initialVNode,
@@ -1300,6 +1314,7 @@ function baseCreateRenderer(
     }
   }
 
+  // 比较新旧组件vnode
   const updateComponent = (n1: VNode, n2: VNode, optimized: boolean) => {
     const instance = (n2.component = n1.component)!
     if (shouldUpdateComponent(n1, n2, optimized)) {
@@ -1325,6 +1340,7 @@ function baseCreateRenderer(
         // double updating the same child component in the same flush.
         invalidateJob(instance.update)
         // instance.update is the reactive effect runner.
+        // 更新instance，重新渲染vnode，patch 新vnode
         instance.update()
       }
     } else {
@@ -1335,6 +1351,7 @@ function baseCreateRenderer(
     }
   }
 
+  // 添加渲染effect
   const setupRenderEffect: SetupRenderEffectFn = (
     instance,
     initialVNode,
@@ -1345,6 +1362,7 @@ function baseCreateRenderer(
     optimized
   ) => {
     // create reactive effect for rendering
+    // 相当于vue2中的渲染watch，利用依赖收集触发当前effect
     instance.update = effect(function componentEffect() {
       if (!instance.isMounted) {
         let vnodeHook: VNodeHook | null | undefined
@@ -1364,6 +1382,7 @@ function baseCreateRenderer(
         if (__DEV__) {
           startMeasure(instance, `render`)
         }
+        // 获得当前组件渲染函数执行后的vnode，相当于vue2中的_vnode
         const subTree = (instance.subTree = renderComponentRoot(instance))
         if (__DEV__) {
           endMeasure(instance, `render`)
@@ -1387,6 +1406,7 @@ function baseCreateRenderer(
           if (__DEV__) {
             startMeasure(instance, `patch`)
           }
+          // 通过patch更新dom，首次
           patch(
             null,
             subTree,
@@ -1463,6 +1483,7 @@ function baseCreateRenderer(
         if (__DEV__) {
           startMeasure(instance, `patch`)
         }
+        // 非首次新旧vnode树patch更新
         patch(
           prevTree,
           nextTree,
@@ -1977,6 +1998,7 @@ function baseCreateRenderer(
     }
   }
 
+  // 卸载vnode同时删除对应的dom
   const unmount: UnmountFn = (
     vnode,
     parentComponent,
@@ -2049,6 +2071,7 @@ function baseCreateRenderer(
         ;(vnode.type as typeof TeleportImpl).remove(vnode, internals)
       }
 
+      // 删除当前dom在dom树中
       if (doRemove) {
         remove(vnode)
       }
@@ -2082,6 +2105,7 @@ function baseCreateRenderer(
       }
     }
 
+    // 有动画移除
     if (
       vnode.shapeFlag & ShapeFlags.ELEMENT &&
       transition &&
@@ -2111,6 +2135,7 @@ function baseCreateRenderer(
     hostRemove(end)
   }
 
+  // 卸载组件
   const unmountComponent = (
     instance: ComponentInternalInstance,
     parentSuspense: SuspenseBoundary | null,
@@ -2125,6 +2150,7 @@ function baseCreateRenderer(
     if (bum) {
       invokeArrayFns(bum)
     }
+    // 停止所有的effect
     if (effects) {
       for (let i = 0; i < effects.length; i++) {
         stop(effects[i])
@@ -2167,6 +2193,7 @@ function baseCreateRenderer(
     }
   }
 
+  // 批量解绑vnode
   const unmountChildren: UnmountChildrenFn = (
     children,
     parentComponent,
@@ -2190,15 +2217,23 @@ function baseCreateRenderer(
     return hostNextSibling((vnode.anchor || vnode.el)!)
   }
 
+  // 把vnode渲染到container（一个父dom）下
+  /**
+   * 渲染过程：组件vnode -> vm(通过patch，新建或者更新已有的vm) -> vnode(vm渲染) -> dom(通过patch)<也可能是组件vnode再一次循环>
+   */
   const render: RootRenderFunction = (vnode, container) => {
+    // 可以通过设置vnode为空来卸载旧节点
     if (vnode == null) {
       if (container._vnode) {
+        // 新vnode为空，解绑老vnode
         unmount(container._vnode, null, null, true)
       }
     } else {
       patch(container._vnode || null, vnode, container)
     }
     flushPostFlushCbs()
+    // 相应的vnode会绑定到dom下的_vnode
+    // _vnode和container的关系也就在手动render的时候才会绑定
     container._vnode = vnode
   }
 

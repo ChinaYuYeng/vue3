@@ -425,6 +425,7 @@ type DataFn = (vm: ComponentPublicInstance) => any
 
 export let isInBeforeCreate = false
 
+// 把vue2的选项全部放到了vue3下的vm实例下的ctx上下文中
 export function applyOptions(
   instance: ComponentInternalInstance,
   options: ComponentOptions,
@@ -578,6 +579,7 @@ export function applyOptions(
       deferredData.forEach(dataFn => resolveData(instance, dataFn, publicThis))
     }
     if (dataOptions) {
+      // 合并options中的data到instance的data
       resolveData(instance, dataOptions, publicThis)
     }
     if (__DEV__) {
@@ -620,10 +622,12 @@ export function applyOptions(
                 )
               }
             : NOOP
+            // 核心是vue3的计算属性
       const c = computed({
         get,
         set
       })
+      // 在上下文中搞了个引用语法糖
       Object.defineProperty(ctx, key, {
         enumerable: true,
         configurable: true,
@@ -811,6 +815,7 @@ function applyMixins(
   }
 }
 
+
 function resolveData(
   instance: ComponentInternalInstance,
   dataFn: DataFn,
@@ -822,6 +827,7 @@ function resolveData(
         `Plain object usage is no longer supported.`
     )
   }
+  // 执行选项data方法
   const data = dataFn.call(publicThis, publicThis)
   if (__DEV__ && isPromise(data)) {
     warn(

@@ -70,6 +70,7 @@ interface Constructor<P = any> {
 
 // The following is a series of overloads for providing props validation of
 // manually written render functions.
+// 在vue2中类似的h方法重载
 
 // element
 export function h(type: string, children?: RawChildren): VNode
@@ -143,6 +144,9 @@ export function h<P>(
 ): VNode
 
 // Actual implementation
+/**
+ * h的内部实现时createVnode
+ */
 export function h(type: any, propsOrChildren?: any, children?: any): VNode {
   const l = arguments.length
   if (l === 2) {

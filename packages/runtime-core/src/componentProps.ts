@@ -111,6 +111,8 @@ type NormalizedProp =
 export type NormalizedProps = Record<string, NormalizedProp>
 export type NormalizedPropsOptions = [NormalizedProps, string[]] | []
 
+// 初始化instance的attrs和props
+// @@初始化props和attrs
 export function initProps(
   instance: ComponentInternalInstance,
   rawProps: Data | null,
@@ -244,6 +246,7 @@ export function updateProps(
   }
 }
 
+// 筛选分配用户传入的propsRaw原始数据到instance下的props和attrs
 function setFullProps(
   instance: ComponentInternalInstance,
   rawProps: Data | null,

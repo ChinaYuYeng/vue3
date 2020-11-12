@@ -58,6 +58,7 @@ export const ErrorTypeStrings: Record<number | string, string> = {
 
 export type ErrorTypes = LifecycleHooks | ErrorCodes
 
+// 调用方法并错误捕获
 export function callWithErrorHandling(
   fn: Function,
   instance: ComponentInternalInstance | null,
@@ -73,6 +74,7 @@ export function callWithErrorHandling(
   return res
 }
 
+// 支持异步错误处理调用函数
 export function callWithAsyncErrorHandling(
   fn: Function | Function[],
   instance: ComponentInternalInstance | null,

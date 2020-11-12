@@ -95,6 +95,7 @@ export type Plugin =
     }
 
 export function createAppContext(): AppContext {
+  // app上下文
   return {
     app: null as any,
     config: {
@@ -124,6 +125,7 @@ export function createAppAPI<HostElement>(
   render: RootRenderFunction,
   hydrate?: RootHydrateFunction
 ): CreateAppFunction<HostElement> {
+  // 经常使用的createApp的定义
   return function createApp(rootComponent, rootProps = null) {
     if (rootProps != null && !isObject(rootProps)) {
       __DEV__ && warn(`root props passed to app.mount() must be an object.`)
@@ -156,6 +158,7 @@ export function createAppAPI<HostElement>(
         }
       },
 
+      // 装载插件
       use(plugin: Plugin, ...options: any[]) {
         if (installedPlugins.has(plugin)) {
           __DEV__ && warn(`Plugin has already been applied to target app.`)
@@ -174,6 +177,7 @@ export function createAppAPI<HostElement>(
         return app
       },
 
+      // 全局混入
       mixin(mixin: ComponentOptions) {
         if (__FEATURE_OPTIONS_API__) {
           if (!context.mixins.includes(mixin)) {
@@ -195,6 +199,7 @@ export function createAppAPI<HostElement>(
         return app
       },
 
+      // 注册全局组件
       component(name: string, component?: Component): any {
         if (__DEV__) {
           validateComponentName(name, context.config)
@@ -209,6 +214,7 @@ export function createAppAPI<HostElement>(
         return app
       },
 
+      // 注册全局指令
       directive(name: string, directive?: Directive) {
         if (__DEV__) {
           validateDirectiveName(name)
@@ -224,8 +230,11 @@ export function createAppAPI<HostElement>(
         return app
       },
 
+      // 挂载组件
       mount(rootContainer: HostElement, isHydrate?: boolean): any {
+        // 一个app只能挂载一次，是一个闭包变量
         if (!isMounted) {
+          // 第一步创建vnode
           const vnode = createVNode(
             rootComponent as ConcreteComponent,
             rootProps
@@ -244,6 +253,7 @@ export function createAppAPI<HostElement>(
           if (isHydrate && hydrate) {
             hydrate(vnode as VNode<Node, Element>, rootContainer as any)
           } else {
+            // 渲染vnode到dom
             render(vnode, rootContainer)
           }
           isMounted = true
@@ -255,6 +265,7 @@ export function createAppAPI<HostElement>(
             devtoolsInitApp(app, version)
           }
 
+          // 返回publicInstance
           return vnode.component!.proxy
         } else if (__DEV__) {
           warn(
@@ -266,6 +277,7 @@ export function createAppAPI<HostElement>(
         }
       },
 
+      // 卸载app
       unmount() {
         if (isMounted) {
           render(null, app._container)

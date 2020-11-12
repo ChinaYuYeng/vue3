@@ -230,7 +230,9 @@ export interface ComponentRenderContext {
   _: ComponentInternalInstance
 }
 
+// publiceInstance访问代理innerInstance
 export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
+  // 访问instance的属性，通过代理的方式把所有的访问方式变成了this.xxx，但是内部确实通过不同的判断访问instance下的不同属性
   get({ _: instance }: ComponentRenderContext, key: string) {
     const {
       ctx,
@@ -258,6 +260,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
     // is the multiple hasOwn() calls. It's much faster to do a simple property
     // access on a plain object, so we use an accessCache object (with null
     // prototype) to memoize what access type a key corresponds to.
+    // 由于get操作比较频繁，多次使用hasOwn是昂贵的因此一个key被访问过之后会被accessCache缓存，之后只要通过accessCache缓存来完成属性的再一次访问
     let normalizedProps
     if (key[0] !== '$') {
       const n = accessCache![key]
@@ -295,10 +298,12 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       }
     }
 
+    // 访问其他属性时的判断，目的和上面的一样
     const publicGetter = publicPropertiesMap[key]
     let cssModule, globalProperties
     // public $xxx properties
     if (publicGetter) {
+      // publiceInstance的$xxx属性方法通过publicGetter
       if (key === '$attrs') {
         track(instance, TrackOpTypes.GET, key)
         __DEV__ && markAttrsAccessed()
@@ -306,6 +311,7 @@ export const PublicInstanceProxyHandlers: ProxyHandler<any> = {
       return publicGetter(instance)
     } else if (
       // css module (injected by vue-loader)
+      // cssmodule是由vue-loader注入进来的
       (cssModule = type.__cssModules) &&
       (cssModule = cssModule[key])
     ) {
@@ -445,6 +451,7 @@ export const RuntimeCompiledPublicInstanceProxyHandlers = extend(
 // In dev mode, the proxy target exposes the same properties as seen on `this`
 // for easier console inspection. In prod mode it will be an empty object so
 // these properties definitions can be skipped.
+// 在dev环境下建立instance上下文，会给ctx附上相关属性方便查看调试
 export function createRenderContext(instance: ComponentInternalInstance) {
   const target: Record<string, any> = {}
 
@@ -456,6 +463,7 @@ export function createRenderContext(instance: ComponentInternalInstance) {
   })
 
   // expose public properties
+  // this.$xxx属性定义
   Object.keys(publicPropertiesMap).forEach(key => {
     Object.defineProperty(target, key, {
       configurable: true,

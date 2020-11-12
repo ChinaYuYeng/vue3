@@ -393,6 +393,7 @@ const emptyAppContext = createAppContext()
 
 let uid = 0
 
+// 创建组件vm实例
 export function createComponentInstance(
   vnode: VNode,
   parent: ComponentInternalInstance | null,
@@ -400,12 +401,13 @@ export function createComponentInstance(
 ) {
   const type = vnode.type as ConcreteComponent
   // inherit parent app context - or - if root, adopt from root vnode
+  // 整个app的上下文
   const appContext =
     (parent ? parent.appContext : vnode.appContext) || emptyAppContext
 
   const instance: ComponentInternalInstance = {
     uid: uid++,
-    vnode,
+    vnode, //相当于vue2中的parentVnode
     type,
     parent,
     appContext,
@@ -485,6 +487,7 @@ export function createComponentInstance(
 
 export let currentInstance: ComponentInternalInstance | null = null
 
+// 根据文档点描述，currentInstance只会在setup或者生命周期函数才会有值，目的是为了进入ComponentInternalInstance来设计更高级点功能
 export const getCurrentInstance: () => ComponentInternalInstance | null = () =>
   currentInstance || currentRenderingInstance
 
@@ -507,6 +510,7 @@ export function validateComponentName(name: string, config: AppConfig) {
 
 export let isInSSRComponentSetup = false
 
+// 丰满instance的实例数据内容
 export function setupComponent(
   instance: ComponentInternalInstance,
   isSSR = false
@@ -515,9 +519,12 @@ export function setupComponent(
 
   const { props, children, shapeFlag } = instance.vnode
   const isStateful = shapeFlag & ShapeFlags.STATEFUL_COMPONENT
+  // 初始化props
   initProps(instance, props, isStateful, isSSR)
+  // 初始化slots
   initSlots(instance, children)
 
+  // 执行setup(),初始化渲染方法，合并vue2中的选项内容
   const setupResult = isStateful
     ? setupStatefulComponent(instance, isSSR)
     : undefined
@@ -525,6 +532,7 @@ export function setupComponent(
   return setupResult
 }
 
+// 调用setup()方法
 function setupStatefulComponent(
   instance: ComponentInternalInstance,
   isSSR: boolean
@@ -552,13 +560,19 @@ function setupStatefulComponent(
   instance.accessCache = {}
   // 1. create public instance / render proxy
   // also mark it raw so it's never observed
+  // 判断instance是否可以被当成普通对象被属性劫持，同时会作为（类似vue2中的this一样）一般性的上下文
+  // 类型是ComponentPublicInstance
   instance.proxy = new Proxy(instance.ctx, PublicInstanceProxyHandlers)
   if (__DEV__) {
     exposePropsOnRenderContext(instance)
   }
   // 2. call setup()
+  /**
+   * setup在执行的时候，instance已经存在了，但是setup的this未设置，是undefined。取而代之的是给与一个上下文参数，为什么呢？
+   */
   const { setup } = Component
   if (setup) {
+    // 创建setup的上下文
     const setupContext = (instance.setupContext =
       setup.length > 1 ? createSetupContext(instance) : null)
 
@@ -597,6 +611,7 @@ function setupStatefulComponent(
   }
 }
 
+// 处理setup()返回的结果
 export function handleSetupResult(
   instance: ComponentInternalInstance,
   setupResult: unknown,
@@ -617,6 +632,7 @@ export function handleSetupResult(
     if (__DEV__ || __FEATURE_PROD_DEVTOOLS__) {
       instance.devtoolsRawSetupState = setupResult
     }
+    // setup()返回的对象被代理后挂载到instance上
     instance.setupState = proxyRefs(setupResult)
     if (__DEV__) {
       exposeSetupStateOnRenderContext(instance)
@@ -628,6 +644,7 @@ export function handleSetupResult(
       }`
     )
   }
+  // setup执行后，编译模板，合并vue2中的选项写法
   finishComponentSetup(instance, isSSR)
 }
 
@@ -646,6 +663,7 @@ export function registerRuntimeCompiler(_compile: any) {
   compile = _compile
 }
 
+// setup执行后，编译模板，合并vue2中的选项写法
 function finishComponentSetup(
   instance: ComponentInternalInstance,
   isSSR: boolean
@@ -686,6 +704,7 @@ function finishComponentSetup(
   }
 
   // support for 2.x options
+  // 兼容vue2的选项写法
   if (__FEATURE_OPTIONS_API__) {
     currentInstance = instance
     applyOptions(instance, Component)

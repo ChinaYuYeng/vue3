@@ -133,6 +133,7 @@ export function shallowReadonly<T extends object>(
   )
 }
 
+// 创建响应式对象
 function createReactiveObject(
   target: Target,
   isReadonly: boolean,
@@ -168,6 +169,7 @@ function createReactiveObject(
     target,
     targetType === TargetType.COLLECTION ? collectionHandlers : baseHandlers
   )
+  // 响应式对象缓存
   proxyMap.set(target, proxy)
   return proxy
 }

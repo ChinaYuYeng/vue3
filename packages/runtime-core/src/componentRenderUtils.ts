@@ -39,6 +39,7 @@ export function markAttrsAccessed() {
   accessedAttrs = true
 }
 
+// 或者组件渲染函数的结果
 export function renderComponentRoot(
   instance: ComponentInternalInstance
 ): VNode {

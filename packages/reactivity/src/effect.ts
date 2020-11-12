@@ -61,6 +61,7 @@ export function effect<T = any>(
   }
   const effect = createReactiveEffect(fn, options)
   if (!options.lazy) {
+    // 初始化instance.update方法的时候，传递的选项lazy是undefined的，在这里执行vm首次的渲染
     effect()
   }
   return effect
@@ -138,6 +139,7 @@ export function resetTracking() {
   shouldTrack = last === undefined ? true : last
 }
 
+// 依赖收集targetMap是一个全局对象，结构{target:{key:[effect]}}，target是依赖收集的对象，key是对象下的某个响应式属性，与effect建立联系
 export function track(target: object, type: TrackOpTypes, key: unknown) {
   if (!shouldTrack || activeEffect === undefined) {
     return
@@ -151,6 +153,7 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
     depsMap.set(key, (dep = new Set()))
   }
   if (!dep.has(activeEffect)) {
+    // 互相留底
     dep.add(activeEffect)
     activeEffect.deps.push(dep)
     if (__DEV__ && activeEffect.options.onTrack) {
@@ -164,6 +167,7 @@ export function track(target: object, type: TrackOpTypes, key: unknown) {
   }
 }
 
+// 触发依赖
 export function trigger(
   target: object,
   type: TriggerOpTypes,
@@ -253,5 +257,6 @@ export function trigger(
     }
   }
 
+  // 执行effects，更新视图
   effects.forEach(run)
 }

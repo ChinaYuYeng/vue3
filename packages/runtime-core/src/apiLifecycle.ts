@@ -13,6 +13,7 @@ import { pauseTracking, resetTracking, DebuggerEvent } from '@vue/reactivity'
 
 export { onActivated, onDeactivated } from './components/KeepAlive'
 
+// step中安装生命周期钩子
 export function injectHook(
   type: LifecycleHooks,
   hook: Function & { __weh?: Function },

@@ -58,6 +58,7 @@ export const createApp = ((...args) => {
   }
 
   const { mount } = app
+  // 通过包装的方式加入的平台相关的逻辑
   app.mount = (containerOrSelector: Element | string): any => {
     const container = normalizeContainer(containerOrSelector)
     if (!container) return
